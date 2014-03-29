@@ -3070,7 +3070,7 @@ bool InitBlockIndex() {
         //   vMerkleTree: 97ddfbbae6
 
         // Genesis block        
-        const char* pszTimestamp = "Wired 09/Jan/2014 The Grand Experiment Goes Live: Overstock.com Is Now Accepting Bitcoins";
+        const char* pszTimestamp = "BitcoinTalk 29/Mar/2014 -Auroracoin - Forked and Game Over";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
