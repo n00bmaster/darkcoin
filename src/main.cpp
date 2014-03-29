@@ -3092,7 +3092,7 @@ bool InitBlockIndex() {
             block.nNonce   = 0;
         }
 
--        if (true && block.GetHash() != hashGenesisBlock)
+-       if (true && block.GetHash() != hashGenesisBlock)
  -        {
  -            printf("Searching for genesis block...\n");
  -            // This will figure out a valid hash and Nonce if you're
@@ -3120,6 +3120,7 @@ bool InitBlockIndex() {
  -            printf("block.nNonce = %u \n", block.nNonce);
  -            printf("block.nVersion = %u \n", block.nVersion);
  -            printf("block.GetHash = %s\n", block.GetHash().ToString().c_str());
+        }
         //// debug print
         uint256 hash = block.GetHash();
         printf("%s\n", hash.ToString().c_str());
