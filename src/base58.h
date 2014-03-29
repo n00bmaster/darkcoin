@@ -272,10 +272,10 @@ class CBitcoinAddress : public CBase58Data
 public:
     enum
     {
-        PUBKEY_ADDRESS = 48+28, // DarkCoin addresses start with X
-        SCRIPT_ADDRESS = 5,
-        PUBKEY_ADDRESS_TEST = 111,
-        SCRIPT_ADDRESS_TEST = 196,
+        PUBKEY_ADDRESS = 11, // BitLoonie addresses start with X
+        SCRIPT_ADDRESS = 9,
+        PUBKEY_ADDRESS_TEST = 35,
+        SCRIPT_ADDRESS_TEST = 199,
     };
 
     bool Set(const CKeyID &id) {

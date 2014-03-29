@@ -1,9 +1,9 @@
-Building DarkCoin
+Building BitLoonie
 
-See doc/readme-qt.rst for instructions on building DarkCoin-Qt,
+See doc/readme-qt.rst for instructions on building BitLoonie-Qt,
 the intended-for-end-users, nice-graphical-interface, reference
-implementation of DarkCoin.
+implementation of BitLoonie.
 
-See doc/build-*.txt for instructions on building darkcoind,
+See doc/build-*.txt for instructions on building bitloonied,
 the intended-for-services, no-graphical-interface, reference
-implementation of DarkCoin.
+implementation of BitLoonie.
