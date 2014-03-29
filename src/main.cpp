@@ -3070,7 +3070,7 @@ bool InitBlockIndex() {
         //   vMerkleTree: 97ddfbbae6
 
         // Genesis block        
-        const char* pszTimestamp = "BitcoinTalk 29/Mar/2014 -Auroracoin - Forked and Game Over";
+        const char* pszTimestamp = "National Post 28/Mar/2014 - Fair Elections Act proof the Conservatives are no normal government";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
@@ -3082,14 +3082,14 @@ bool InitBlockIndex() {
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1390095618;
+        block.nTime    = 1396132110;
         block.nBits    = 0x1e0ffff0;
-        block.nNonce   = 28917698;
+        block.nNonce   = 0;
 
         if (fTestNet)
         {
             block.nTime    = 1396130717;
-            block.nNonce   = 3861367235;
+            block.nNonce   = 0;
         }
 
         //// debug print
