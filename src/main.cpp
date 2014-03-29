@@ -2448,7 +2448,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
 
 
         // Check proof of work
-               
+               /* 
         if(nHeight >= 34140 && nHeight <= 45000){
             unsigned int nBitsNext = GetNextWorkRequired(pindexPrev, this);
             unsigned int a = 0;
@@ -2460,7 +2460,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
             printf(" !--- %f %f, %f \n", n1, n2, n1-n2);
             if (abs(n1-n2) > 5)
                 return state.DoS(100, error("AcceptBlock() : incorrect proof of work (DGW pre-fork)"));
-        } else {
+        } else {{*/
             if (nBits != GetNextWorkRequired(pindexPrev, this))
                 return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
         //}
@@ -3092,7 +3092,7 @@ bool InitBlockIndex() {
             block.nNonce   = 0;
         }
 
--       if (true && block.GetHash() != hashGenesisBlock)
+-        if (true && block.GetHash() != hashGenesisBlock)
  -        {
  -            printf("Searching for genesis block...\n");
  -            // This will figure out a valid hash and Nonce if you're
@@ -3120,7 +3120,7 @@ bool InitBlockIndex() {
  -            printf("block.nNonce = %u \n", block.nNonce);
  -            printf("block.nVersion = %u \n", block.nVersion);
  -            printf("block.GetHash = %s\n", block.GetHash().ToString().c_str());
-        }
+    }
         //// debug print
         uint256 hash = block.GetHash();
         printf("%s\n", hash.ToString().c_str());
