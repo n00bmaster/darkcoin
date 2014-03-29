@@ -2448,7 +2448,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
 
 
         // Check proof of work
-        /*        
+               
         if(nHeight >= 34140 && nHeight <= 45000){
             unsigned int nBitsNext = GetNextWorkRequired(pindexPrev, this);
             unsigned int a = 0;
@@ -2460,7 +2460,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
             printf(" !--- %f %f, %f \n", n1, n2, n1-n2);
             if (abs(n1-n2) > 5)
                 return state.DoS(100, error("AcceptBlock() : incorrect proof of work (DGW pre-fork)"));
-        } else {*/
+        } else {
             if (nBits != GetNextWorkRequired(pindexPrev, this))
                 return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
         //}
@@ -3037,7 +3037,7 @@ bool LoadBlockIndex()
         pchMessageStart[1] = 0xc1;
         pchMessageStart[2] = 0xb7;
         pchMessageStart[3] = 0xdc;
-        hashGenesisBlock = uint256("0x00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c");
+        hashGenesisBlock = uint256("0x951694f2e66e223873ed7a312de0a0c0b6c2b27b6106d9221bf8baa3f8c65f73");
     }
 
     //
@@ -3092,12 +3092,40 @@ bool InitBlockIndex() {
             block.nNonce   = 0;
         }
 
+-        if (true && block.GetHash() != hashGenesisBlock)
+ -        {
+ -            printf("Searching for genesis block...\n");
+ -            // This will figure out a valid hash and Nonce if you're
+ -            // creating a different genesis block:
+ -            uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
+ -            uint256 thash;
+ -
+ -            loop
+ -            {
+ -                thash = block.GetHash();
+ -                if (thash <= hashTarget)
+ -                    break;
+ -                if ((block.nNonce & 0xFFF) == 0)
+ -                {
+ -                    printf("nonce %08X: hash = %s (target = %s)\n", block.nNonce, thash.ToString().c_str(), hashTarget.ToString().c_str());
+ -                }
+ -                ++block.nNonce;
+ -                if (block.nNonce == 0)
+ -                {
+ -                    printf("NONCE WRAPPED, incrementing time\n");
+ -                    ++block.nTime;
+ -                }
+ -            }
+ -            printf("block.nTime = %u \n", block.nTime);
+ -            printf("block.nNonce = %u \n", block.nNonce);
+ -            printf("block.nVersion = %u \n", block.nVersion);
+ -            printf("block.GetHash = %s\n", block.GetHash().ToString().c_str());
         //// debug print
         uint256 hash = block.GetHash();
         printf("%s\n", hash.ToString().c_str());
         printf("%s\n", hashGenesisBlock.ToString().c_str());
         printf("%s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0xe0028eb9648db56b1ac77cf090b99048a8007e2bb64b68f092c03c7f56a662c7"));
+        assert(block.hashMerkleRoot == uint256("0xd9e8e207f894b998fb9b5b8a2e254c6c0252f47c4d2dd409e9f25757327b1d78"));
         block.print();
         assert(hash == hashGenesisBlock);
 
