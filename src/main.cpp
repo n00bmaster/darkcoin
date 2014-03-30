@@ -578,7 +578,7 @@ bool CTransaction::CheckTransaction(CValidationState &state) const
 
     if (IsCoinBase())
     {
-        if (vin[0].scriptSig.size() < 1 || vin[0].scriptSig.size() > 100)
+        if (vin[0].scriptSig.size() < 2 || vin[0].scriptSig.size() > 100)
             return state.DoS(100, error("CTransaction::CheckTransaction() : coinbase script size"));
     }
     else
@@ -3070,7 +3070,7 @@ bool InitBlockIndex() {
         //   vMerkleTree: 97ddfbbae6
 
         // Genesis block        
-        const char* pszTimestamp = "National Post 28/Mar/2014 - Fair Elections Act proof the Conservatives are no normal government";
+        const char* pszTimestamp = "NPost 28/Mar/2014 -Conservatives are no normal government";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
