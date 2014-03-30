@@ -1088,37 +1088,26 @@ int64 static GetBlockValue(int nBits, int nHeight, int64 nFees)
         (double)0x0000ffff / (double)(nBits & 0x00ffffff);
 
     /* fixed bug caused diff to not be correctly calculated */
-    if(nHeight > 4500) dDiff = ConvertBitsToDouble(nBits);
+    dDiff = ConvertBitsToDouble(nBits);
 
     int64 nSubsidy = 0; 
-    if(nHeight >= 5465) {
-        if((nHeight >= 17000 && dDiff > 75) || nHeight >= 24000) { // GPU/ASIC difficulty calc
-            // 2222222/(((x+2600)/9)^2)
-            nSubsidy = (2222222.0 / (pow((dDiff+2600.0)/9.0,2.0)));
-            if (nSubsidy > 25) nSubsidy = 25;
-            if (nSubsidy < 5) nSubsidy = 5;
-        } else { // CPU mining calc
-            nSubsidy = (11111.0 / (pow((dDiff+51.0)/6.0,2.0)));
-            if (nSubsidy > 500) nSubsidy = 500;
-            if (nSubsidy < 25) nSubsidy = 25;
-        }
-    } else {
-        nSubsidy = (1111.0 / (pow((dDiff+1.0),2.0)));
-        if (nSubsidy > 500) nSubsidy = 500;
-        if (nSubsidy < 1) nSubsidy = 1;
-    }
+// Bitloonie Diff Calc
+            // tweaked from drks 2222222/(((x+2600)/9)^2)
+            nSubsidy = (1867107.0 / (pow((dDiff+1982.0)/4.0,2.0)));
+            if (nSubsidy > 10) nSubsidy = 10;
+            if (nSubsidy < 1) nSubsidy = 1;
 
     // printf("height %u diff %4.2f reward %i \n", nHeight, dDiff, nSubsidy);
     nSubsidy *= COIN;
 
     // yearly decline of production by 7% per year, projected 21.3M coins max by year 2050.
-    for(int i = 210240; i <= nHeight; i += 210240) nSubsidy *= 0.93;
+    for(int i = 210240; i <= nHeight; i += 210240) nSubsidy *= 0.90;
 
     return nSubsidy + nFees;
 }
 
 static const int64 nTargetTimespan = 24 * 60 * 60; // BitLoonie: 1 day
-static const int64 nTargetSpacing = 2.5 * 60; // BitLoonie: 2.5 minutes
+static const int64 nTargetSpacing = 0.5 * 60; // BitLoonie: 30 second block target
 static const int64 nInterval = nTargetTimespan / nTargetSpacing; // 576
 
 //
@@ -1284,6 +1273,7 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast, const CBlockH
     int64 nBlockTimeCount2 = 0;
     int64 LastBlockTime = 0;
     int64 PastBlocksMin = 14;
+
     int64 PastBlocksMax = 140;
     int64 CountBlocks = 0;
     CBigNum PastDifficultyAverage;
@@ -1422,35 +1412,11 @@ unsigned int static DarkGravityWave2(const CBlockIndex* pindexLast, const CBlock
     return bnNew.GetCompact();
 }
 
-unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
-{
-        static const int64 BlocksTargetSpacing = 2.5 * 60; // 2.5 minutes
-        static const unsigned int TimeDaySeconds = 60 * 60 * 24;
-        int64 PastSecondsMin = TimeDaySeconds * 0.025;
-        int64 PastSecondsMax = TimeDaySeconds * 7;
-        uint64 PastBlocksMin = PastSecondsMin / BlocksTargetSpacing;
-        uint64 PastBlocksMax = PastSecondsMax / BlocksTargetSpacing;
-        
-        return KimotoGravityWell(pindexLast, pblock, BlocksTargetSpacing, PastBlocksMin, PastBlocksMax);
-}
+
 
 unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
         int DiffMode = 1;
-        if (fTestNet) {
-                if (pindexLast->nHeight+1 >= 15) { DiffMode = 4; }
-                else if (pindexLast->nHeight+1 >= 5) { DiffMode = 3; }
-        }
-        else {
-                if (pindexLast->nHeight+1 >= 45000) { DiffMode = 4; }
-                else if (pindexLast->nHeight+1 >= 34140) { DiffMode = 3; }
-                else if (pindexLast->nHeight+1 >= 15200) { DiffMode = 2; }
-        }
-
-        if (DiffMode == 1) { return GetNextWorkRequired_V1(pindexLast, pblock); }
-        else if (DiffMode == 2) { return GetNextWorkRequired_V2(pindexLast, pblock); }
-        else if (DiffMode == 3) { return DarkGravityWave(pindexLast, pblock); }
-        else if (DiffMode == 4) { return DarkGravityWave2(pindexLast, pblock); }
         return DarkGravityWave2(pindexLast, pblock);
 }
 
