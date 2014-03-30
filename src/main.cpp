@@ -3090,7 +3090,7 @@ bool InitBlockIndex() {
         {
             block.nTime    = 1396130717;
             block.nNonce   = 993748;
-            if ( false && block.GetHash() != hashGenesisBlock)
+            if ( true && block.GetHash() != hashGenesisBlock)
             {
                     printf("Searching for genesis block...\n");
                  // This will figure out a valid hash and Nonce if you're
@@ -3124,7 +3124,7 @@ bool InitBlockIndex() {
         printf("%s\n", hash.ToString().c_str());
         printf("%s\n", hashGenesisBlock.ToString().c_str());
         printf("%s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0xd9e8e207f894b998fb9b5b8a2e254c6c0252f47c4d2dd409e9f25757327b1d78"));
+        assert(block.hashMerkleRoot == uint256("0ef4883d4d2f7964a2f08ece23b5e9d6f8a934028108766fc91c45196725f772"));
         block.print();
         assert(hash == hashGenesisBlock);
         }
