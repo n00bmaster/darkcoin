@@ -1191,17 +1191,18 @@ void MapPort(bool)
 // Each pair gives a source name and a seed name.
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
+
 static const char *strMainNetDNSSeed[][2] = {
     {"vps.plaing.net", "108.60.218.74"},
     {"bitloonie.com", "bitloonie.com"},
     {"bitloonie.ca", "bitloonie.ca"},
-    {NULL, NULL}
+    {NULL, NULL},
 };
 
 static const char *strTestNetDNSSeed[][2] = {
     {"vps.plaing.net", "vps.plaing.net"},
     {"testnet.bitloonie.com", "testnet.bitloonie.com"},
-    {NULL, NULL}
+{NULL, NULL},
 };
 
 void ThreadDNSAddressSeed()
@@ -1229,7 +1230,9 @@ void ThreadDNSAddressSeed()
                     found++;
                 }
             }
-            addrman.Add(vAdd, CNetAddr(strDNSSeed[seed_idx][0], true));
+            if(strcmp(strDNSSeed[seed_idx][0], "") != 0) {
+                addrman.Add(vAdd, CNetAddr(strDNSSeed[seed_idx][0], true));
+            }
         }
     }
 
@@ -1245,11 +1248,12 @@ void ThreadDNSAddressSeed()
 
 
 
-
+// python to generate the seed hex
+// '{:02X}{:02X}{:02X}{:02X}'.format(*map(int, "23.23.186.131".split('.')))
 
 unsigned int pnSeed[] =
 {
-    0x1717ba83, 0x3210ce66, 0x3213747b
+    0x1717ba83, 0x3210ce66, 0x3213747b, 0x36c17c20, 0x3e8d27af, 0xc06320a6, 0x6b9b4748, 0xa2fc532c
 };
 
 void DumpAddresses()
@@ -1900,4 +1904,24 @@ void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataSt
         } else
             pnode->PushInventory(inv);
     }
+}
+
+void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current)
+{
+    int c = 0;
+    LOCK(cs_vNodes);
+    BOOST_FOREACH(CNode* pnode, vNodes)
+    {
+        pnode->PushMessage("dsee", vin, addr, vchSig, nNow, pubkey, pubkey2, count, current);
+    }   
+}
+
+void RelayDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64 nNow, const bool stop)
+{
+    int c = 0;
+    LOCK(cs_vNodes);
+    BOOST_FOREACH(CNode* pnode, vNodes)
+    {
+        pnode->PushMessage("dseep", vin, vchSig, nNow, stop);
+    }   
 }

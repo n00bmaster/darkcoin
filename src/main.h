@@ -10,8 +10,13 @@
 #include "net.h"
 #include "script.h"
 #include "hashblock.h"
+#include "base58.h"
 
 #include <list>
+#include <algorithm>
+#include <boost/lexical_cast.hpp>
+
+//#define static_assert(numeric_limits<double>::max_exponent() > 8, "your double sux");
 
 class CWallet;
 class CBlock;
@@ -22,6 +27,22 @@ class CReserveKey;
 class CAddress;
 class CInv;
 class CNode;
+class CDarkSendPool;
+class CDarkSendSigner;
+class CMasterNode;
+class CMasterNodeVote;
+class CBitcoinAddress;
+
+#define MASTERNODE_PAYMENTS_MIN_VOTES 6
+#define MASTERNODE_PAYMENTS_MAX 1
+#define MASTERNODE_PAYMENTS_EXPIRATION 10
+#define START_MASTERNODE_PAYMENTS_TESTNET 1398872033+(60*25)
+#define START_MASTERNODE_PAYMENTS 1401033600 //Sun, 25 May 2014 16:00:00 GMT
+
+#define MASTERNODE_MIN_CONFIRMATIONS           6
+#define MASTERNODE_MIN_MICROSECONDS            55*60*1000
+#define MASTERNODE_PING_SECONDS                60*60
+#define MASTERNODE_EXPIRATION_MICROSECONDS     65*60*1000
 
 struct CBlockIndexWorkComparator;
 
@@ -95,13 +116,18 @@ extern int64 nHPSTimerStart;
 extern int64 nTimeBestReceived;
 extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
-extern unsigned char pchMessageStart[4];
 extern bool fImporting;
 extern bool fReindex;
 extern bool fBenchmark;
 extern int nScriptCheckThreads;
 extern bool fTxIndex;
 extern unsigned int nCoinCacheSize;
+extern CDarkSendPool darkSendPool;
+extern CDarkSendSigner darkSendSigner;
+extern std::vector<CMasterNode> darkSendMasterNodes;
+extern std::vector<CMasterNodeVote> darkSendMasterNodeVotes;
+extern std::string strMasterNodePrivKey;
+extern CWallet pmainWallet;
 
 // Settings
 extern int64 nTransactionFee;
@@ -156,6 +182,8 @@ CBlockIndex* FindBlockByHeight(int nHeight);
 bool ProcessMessages(CNode* pfrom);
 /** Send queued protocol messages to be sent to a give node */
 bool SendMessages(CNode* pto, bool fSendTrickle);
+//** Get age of an input */
+int GetInputAge(CTxIn& vin);
 /** Run an instance of the script checking thread */
 void ThreadScriptCheck();
 /** Run the miner threads */
@@ -686,6 +714,12 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
     // Try to accept this transaction into the memory pool
     bool AcceptToMemoryPool(CValidationState &state, bool fCheckInputs=true, bool fLimitFree = true, bool* pfMissingInputs=NULL);
 
+    // Check everything without accepting into the pool
+    bool IsAcceptable(CValidationState &state, bool fCheckInputs=true, bool fLimitFree = true, bool* pfMissingInputs=NULL);
+    
+    // Check only the inputs in a transaction
+    bool AcceptableInputs(CValidationState &state, bool fLimitFree);
+
 protected:
     static const CTxOut &GetOutputFor(const CTxIn& input, CCoinsViewCache& mapInputs);
 };
@@ -789,6 +823,8 @@ public:
             return error("CBlockUndo::WriteToDisk() : OpenUndoFile failed");
 
         // Write index header
+        unsigned char pchMessageStart[4];
+        GetMessageStart(pchMessageStart, true);
         unsigned int nSize = fileout.GetSerializeSize(*this);
         fileout << FLATDATA(pchMessageStart) << nSize;
 
@@ -1164,6 +1200,7 @@ public:
     bool IsInMainChain() const { return GetDepthInMainChain() > 0; }
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(bool fCheckInputs=true, bool fLimitFree=true);
+    bool IsAcceptable(bool fCheckInputs=true, bool fLimitFree=true);
 };
 
 
@@ -1335,8 +1372,10 @@ class CBlock : public CBlockHeader
 public:
     // network and disk
     std::vector<CTransaction> vtx;
+    std::vector<CMasterNodeVote> vmn;
 
     // memory only
+    mutable CScript payee;
     mutable std::vector<uint256> vMerkleTree;
 
     CBlock()
@@ -1354,13 +1393,21 @@ public:
     (
         READWRITE(*(CBlockHeader*)this);
         READWRITE(vtx);
+
+        if(fTestNet){
+            if(nTime > START_MASTERNODE_PAYMENTS_TESTNET) READWRITE(vmn);
+        } else {
+            if(nTime > START_MASTERNODE_PAYMENTS) READWRITE(vmn);    
+        }
     )
 
     void SetNull()
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vmn.clear();
         vMerkleTree.clear();
+        payee = CScript();
     }
 
     uint256 GetPoWHash() const
@@ -1444,6 +1491,8 @@ public:
             return error("CBlock::WriteToDisk() : OpenBlockFile failed");
 
         // Write index header
+        unsigned char pchMessageStart[4];
+        GetMessageStart(pchMessageStart);
         unsigned int nSize = fileout.GetSerializeSize(*this);
         fileout << FLATDATA(pchMessageStart) << nSize;
 
@@ -1527,11 +1576,23 @@ public:
     bool AddToBlockIndex(CValidationState &state, const CDiskBlockPos &pos);
 
     // Context-independent validity checks
-    bool CheckBlock(CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true) const;
+    bool CheckBlock(CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckVotes=true) const;
 
     // Store block on disk
     // if dbp is provided, the file is known to already reside on disk
     bool AcceptBlock(CValidationState &state, CDiskBlockPos *dbp = NULL);
+
+    
+    bool MasterNodePaymentsOn()
+    {
+        //printf("nTime > START_MASTERNODE_PAYMENTS_TESTNET %"PRI64u" > %f = %d\n", nTime, START_MASTERNODE_PAYMENTS_TESTNET, nTime > START_MASTERNODE_PAYMENTS_TESTNET);
+        if(fTestNet){
+            if(nTime > START_MASTERNODE_PAYMENTS_TESTNET) return true;
+        } else {
+            if(nTime > START_MASTERNODE_PAYMENTS) return true;
+        }
+        return false;
+    }
 };
 
 
@@ -2100,6 +2161,8 @@ public:
     std::map<COutPoint, CInPoint> mapNextTx;
 
     bool accept(CValidationState &state, CTransaction &tx, bool fCheckInputs, bool fLimitFree, bool* pfMissingInputs);
+    bool acceptable(CValidationState &state, CTransaction &tx, bool fCheckInputs, bool fLimitFree, bool* pfMissingInputs);
+    bool acceptableInputs(CValidationState &state, CTransaction &tx, bool fLimitFree);
     bool addUnchecked(const uint256& hash, const CTransaction &tx);
     bool remove(const CTransaction &tx, bool fRecursive = false);
     bool removeConflicts(const CTransaction &tx);
@@ -2262,7 +2325,8 @@ class CMerkleBlock
 {
 public:
     // Public only for unit testing
-    CBlockHeader header;
+    CBlockHeader
+     header;
     CPartialMerkleTree txn;
 
 public:
@@ -2281,5 +2345,171 @@ public:
         READWRITE(txn);
     )
 };
+
+class CMasterNodeVote
+{   
+public:
+    int votes;
+    CScript pubkey;
+    int nVersion;
+    bool setPubkey;
+
+    int64 blockHeight;
+    static const int CURRENT_VERSION=1;
+
+    CMasterNodeVote() {
+        SetNull();
+    }
+
+    void Set(CPubKey& pubKeyIn, int64 blockHeightIn, int votesIn=1)
+    {
+        pubkey.SetDestination(pubKeyIn.GetID());
+        blockHeight = blockHeightIn;
+        votes = votesIn;
+    }
+
+    void Set(CScript pubKeyIn, int64 blockHeightIn, int votesIn=1)
+    {
+        pubkey = pubKeyIn;
+        blockHeight = blockHeightIn;
+        votes = votesIn;
+    }
+
+    void SetNull()
+    {
+        nVersion = CTransaction::CURRENT_VERSION;
+        votes = 0;
+        pubkey = CScript();
+        blockHeight = 0;
+    }
+
+    void Vote()
+    { 
+        votes += 1; 
+    }
+
+    int GetVotes()
+    { 
+        return votes;
+    }
+
+    int GetHeight()
+    { 
+        return blockHeight;
+    }
+
+    CScript& GetPubKey()
+    {
+        return pubkey;
+    }
+
+    IMPLEMENT_SERIALIZE
+    (
+        nVersion = this->nVersion;
+        READWRITE(blockHeight);
+        READWRITE(pubkey);
+        READWRITE(votes);
+    )
+
+
+};
+
+class CMasterNode
+{
+public:
+    CService addr;
+    CTxIn vin;
+    int64 lastTimeSeen;
+    CPubKey pubkey;
+    CPubKey pubkey2;
+    std::vector<unsigned char> sig;
+    int64 now;
+    int enabled;
+
+    CMasterNode(CService newAddr, CTxIn newVin, CPubKey newPubkey, std::vector<unsigned char> newSig, int64 newNow, CPubKey newPubkey2)
+    {
+        addr = newAddr;
+        vin = newVin;
+        pubkey = newPubkey;
+        pubkey2 = newPubkey2;
+        sig = newSig;
+        now = newNow;
+        enabled = 1;
+        lastTimeSeen = 0;
+    
+    }
+
+    uint256 CalculateScore(int mod=10);
+
+    void UpdateLastSeen()
+    {
+        lastTimeSeen = GetTimeMillis();
+    }
+
+    void Check();
+
+    bool UpdatedWithin(int milliSeconds)
+    {
+        //printf("UpdatedWithin %"PRI64u"\n", GetTimeMillis() - lastTimeSeen);
+        return GetTimeMillis() - lastTimeSeen < milliSeconds;
+    }
+
+    void Disable()
+    {
+        lastTimeSeen = 0;
+    }
+
+    bool IsEnabled()
+    {
+        return enabled == 1;
+    }
+};
+
+
+
+class CDarkSendSigner
+{
+public:
+    bool SetKey(std::string strSecret, std::string& errorMessage, CKey& key, CPubKey& pubkey);
+    bool SignMessage(std::string strMessage, std::string& errorMessage, std::vector<unsigned char>& vchSig, CKey key);
+    bool VerifyMessage(CPubKey pubkey, std::vector<unsigned char>& vchSig, std::string strMessage, std::string& errorMessage);
+};
+
+static const int64 POOL_FEE_AMOUNT = 0.025*COIN;
+
+/** Used to keep track of current status of darksend pool
+ */
+class CDarkSendPool
+{
+public:
+    static const int MIN_PEER_PROTO_VERSION = 70015;
+
+    CTxIn vinMasterNode;
+    CPubKey pubkeyMasterNode;
+    std::vector<unsigned char> vchMasterNodeSignature;
+    CScript collateralPubKey;
+    
+    int64 masterNodeSignatureTime;
+
+    CDarkSendPool()
+    {
+
+        std::string strAddress = "";  
+        if(!fTestNet) {
+            strAddress = "Xq19GqFvajRrEdDHYRKGYjTsQfpV5jyipF";
+        } else {
+            strAddress = "mxE2Rp3oYpSEFdsN5TdHWhZvEHm3PJQQVm";
+        }
+        
+        SetCollateralAddress(strAddress);
+    }
+
+    void SetCollateralAddress(std::string strAddress);
+    bool GetLastValidBlockHash(uint256& hash, int mod=10);
+    int GetCurrentMasterNode(int mod=10);
+    void NewBlock();
+};
+
+
 
 #endif

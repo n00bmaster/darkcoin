@@ -136,6 +136,8 @@ extern std::string HexBits(unsigned int nBits);
 extern std::string HelpRequiringPassphrase();
 extern void EnsureWalletIsUnlocked();
 
+extern json_spirit::Value masternode(const json_spirit::Array& params, bool fHelp);
+
 extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
 extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value addnode(const json_spirit::Array& params, bool fHelp);
@@ -175,6 +177,7 @@ extern json_spirit::Value listtransactions(const json_spirit::Array& params, boo
 extern json_spirit::Value listaddressgroupings(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listaccounts(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listsinceblock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value makekeypair(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gettransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value backupwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value keypoolrefill(const json_spirit::Array& params, bool fHelp);
