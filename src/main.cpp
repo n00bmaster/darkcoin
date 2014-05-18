@@ -4039,7 +4039,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             mn.UpdateLastSeen();
             darkSendMasterNodes.push_back(mn);
             
-            if(count != -1)
+            if(count == -1)
                 RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current); 
 
         } else {
